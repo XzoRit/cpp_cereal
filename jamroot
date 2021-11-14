@@ -1,0 +1,18 @@
+project app_project
+    : requirements <cxxstd>latest
+    : build-dir build_boost
+    ;
+
+build-project app
+    ;
+
+build-project lib
+    ;
+
+use-project /lib
+    : lib
+    ;
+
+use-project /external
+    : external
+    ;

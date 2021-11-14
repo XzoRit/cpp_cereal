@@ -1,0 +1,36 @@
+* cereal playground
+** build files
+Boost.Build and CMake build files are available.
+*** Boost.Build
+mkdir build_boost
+**** build
+- b2
+- b2 -q toolset=gcc-10 lib//lib
+- b2 -q toolset=gcc-10 lib//test
+- b2 -q toolset=gcc-10 app//exe
+**** run application executeable
+- b2 -q toolset=gcc-10 app//run
+*** CMake
+**** configure
+cmake -B ./build -S ./ -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DCMAKE_CXX_STANDARD=20
+**** build
+cmake --build ./build --target all
+**** execute test and app with ctest
+- cd build && ctest --output-on-failure -V
+- ctest -R 'app::exe' --output-on-failure -V
+- ctest -R 'lib::test' --output-on-failure -V
+**** build and run tests with ctest
+- ctest --build-and-test . ./build --build-generator "Unix Makefiles" --build-noclean --build-nocmake --test-command ./lib/lib_test --help
+** formatting
+*** Clang-Format file is available.
+find ./ -type f -name '*.?pp' -exec clang-format -i {} \;
+*** cmake-format configuration
+see [[https://github.com/cheshirekow/cmake_format][cmake-format]]
+execute with: find . -type f -name 'CMakeLists.txt' -execdir cmake-format -i {} \;
+** ci
+Support for travis-ci is available.
+** compile_comand.json
+cmake is configured to produce a compile_comand.json.
+Most tools expect it to be in the root directory of the project.
+This is achieved by creating a link e.g.:
+ln -s build/compile_commands.json
