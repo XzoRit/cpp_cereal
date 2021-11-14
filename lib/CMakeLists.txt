@@ -46,6 +46,7 @@ target_link_libraries(
   lib_test
   PRIVATE
     lib::lib
+    cereal::cereal
     Boost::unit_test_framework
 )
 

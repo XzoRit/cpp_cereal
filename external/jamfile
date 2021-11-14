@@ -1,0 +1,6 @@
+alias cereal
+    : # no sources
+    : # no build requirements
+    : # no default build
+    : <include>./cereal/include
+    ;

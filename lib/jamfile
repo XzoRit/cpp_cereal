@@ -34,6 +34,7 @@ run $(test_sources)
     : --color_output=false
     :
     : <library>lib
+      <library>/external//cereal
       <library>/boost//unit_test_framework
     : test
     ;
