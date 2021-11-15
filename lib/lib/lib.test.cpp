@@ -1,7 +1,7 @@
-#include "cereal/cereal.hpp"
 #include <cereal/archives/json.hpp>
-#include <cereal/types/memory.hpp>
-#include <cereal/types/unordered_map.hpp>
+#include <cereal/cereal.hpp>
+#include <cereal/types/utility.hpp>
+#include <cereal/types/vector.hpp>
 
 #include <boost/test/unit_test.hpp>
 
@@ -9,42 +9,51 @@
 #include <ostream>
 #include <sstream>
 #include <tuple>
-#include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace
 {
 struct simple_data
 {
+    simple_data() = default;
+    simple_data(int aa, int bb, float cc)
+        : a{aa}
+        , b{bb}
+        , c{cc}
+    {
+    }
+
     template <class Archive>
     void serialize(Archive& ar)
     {
-        ar(cereal::make_nvp("x", x), cereal::make_nvp("y", y), cereal::make_nvp("z", z));
+        ar(cereal::make_nvp("a", a), cereal::make_nvp("b", b), cereal::make_nvp("c", c));
     }
 
-    uint8_t x{};
-    uint8_t y{};
-    float z{};
+    bool operator==(const simple_data&) const = default;
+
+    int a{};
+    int b{};
+    float c{};
 };
-
-bool operator==(const simple_data& a, const simple_data& b) noexcept
-{
-    return std::tie(a.x, a.y, a.z) == std::tie(b.x, b.y, b.z);
-}
-
-bool operator!=(const simple_data& a, const simple_data& b) noexcept
-{
-    return !(a == b);
-}
 
 std::ostream& operator<<(std::ostream& str, const simple_data& a)
 {
-    str << "x=" << a.x << " y=" << a.y << " z=" << a.z;
+    str << "a=" << a.a << " b=" << a.b << " c=" << a.c;
 
     return str;
 }
 
 struct complex_data
 {
+    using data_type = std::vector<std::pair<int, simple_data>>;
+
+    complex_data() = default;
+    complex_data(data_type d)
+        : data{std::move(d)}
+    {
+    }
+
     template <class Archive>
     void save(Archive& ar) const
     {
@@ -54,36 +63,20 @@ struct complex_data
     template <class Archive>
     void load(Archive& ar)
     {
-        static int32_t idGen = 0;
-        id = idGen++;
         ar(data);
     }
 
-    int32_t id{};
-    std::shared_ptr<std::unordered_map<uint32_t, simple_data>> data{};
+    bool operator==(const complex_data&) const = default;
+
+    data_type data{};
 };
-
-bool operator==(const complex_data& a, const complex_data& b) noexcept
-{
-    return std::tie(a.id, a.data) == std::tie(b.id, b.data);
-}
-
-bool operator!=(const complex_data& a, const complex_data& b) noexcept
-{
-    return !(a == b);
-}
 
 std::ostream& operator<<(std::ostream& str, const complex_data& a)
 {
-    str << "id=" << a.id << '{';
-    if (a.data)
+    for (const auto& [i, d] : a.data)
     {
-        for (const auto& [i, d] : (*a.data))
-        {
-            str << '(' << i << ',' << d << ')';
-        }
+        str << '(' << i << ',' << d << ')';
     }
-    str << '}';
 
     return str;
 }
@@ -93,20 +86,22 @@ BOOST_AUTO_TEST_SUITE(lib_tests)
 BOOST_AUTO_TEST_CASE(load_save_simple_data)
 {
     std::stringstream ss{};
-    const simple_data a{};
+    const simple_data a{1, 22, 33.0};
     {
         cereal::JSONOutputArchive archive{ss};
 
         archive(cereal::make_nvp("simple_data", a));
     }
-    BOOST_CHECK(!ss.str().empty());
+
+    BOOST_REQUIRE(!ss.str().empty());
     BOOST_CHECK_EQUAL(ss.str(), R"({
     "simple_data": {
-        "x": 0,
-        "y": 0,
-        "z": 0.0
+        "a": 1,
+        "b": 22,
+        "c": 33.0
     }
 })");
+
     {
         cereal::JSONInputArchive iarchive(ss);
 
@@ -120,22 +115,46 @@ BOOST_AUTO_TEST_CASE(load_save_simple_data)
 BOOST_AUTO_TEST_CASE(load_save_complex_data)
 {
     std::stringstream ss{};
-    const complex_data a{};
+    const complex_data a{{{0, {0, 0, 0.}}, {1, {1, 1, 1.}}, {2, {2, 2, 2.}}}};
+
     {
         cereal::JSONOutputArchive archive{ss};
 
         archive(cereal::make_nvp("complex_data", a));
     }
-    BOOST_CHECK(!ss.str().empty());
+
+    BOOST_REQUIRE(!ss.str().empty());
     BOOST_CHECK_EQUAL(ss.str(), R"({
     "complex_data": {
-        "data": {
-            "ptr_wrapper": {
-                "id": 0
+        "data": [
+            {
+                "first": 0,
+                "second": {
+                    "a": 0,
+                    "b": 0,
+                    "c": 0.0
+                }
+            },
+            {
+                "first": 1,
+                "second": {
+                    "a": 1,
+                    "b": 1,
+                    "c": 1.0
+                }
+            },
+            {
+                "first": 2,
+                "second": {
+                    "a": 2,
+                    "b": 2,
+                    "c": 2.0
+                }
             }
-        }
+        ]
     }
 })");
+
     {
         cereal::JSONInputArchive iarchive(ss);
 
