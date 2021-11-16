@@ -4,7 +4,7 @@ constant sources
 
 exe exe
     : $(sources)
-      /lib//lib
+      /external//cereal
       /boost//program_options
     ;
 

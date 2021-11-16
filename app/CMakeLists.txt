@@ -11,7 +11,7 @@ target_sources(
 target_link_libraries(
   app_exe
   PRIVATE
-    lib::lib
+    cereal::cereal
     Boost::program_options
 )
 
