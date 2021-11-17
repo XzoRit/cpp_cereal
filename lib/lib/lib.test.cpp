@@ -8,13 +8,39 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/utility/identity_type.hpp>
 
-#include <libs/test/include/boost/test/tools/old/interface.hpp>
-#include <libs/test/include/boost/test/unit_test_log.hpp>
 #include <ostream>
+#include <random>
 #include <sstream>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
+
+namespace
+{
+std::random_device rd{};
+std::mt19937 gen{rd()};
+
+template <class T>
+inline typename std::enable_if<std::is_floating_point<T>::value, T>::type random_value(std::mt19937& gen)
+{
+    return std::uniform_real_distribution<T>(-10000.0, 10000.0)(gen);
+}
+
+template <class T>
+inline typename std::enable_if<std::is_integral<T>::value && sizeof(T) != sizeof(char), T>::type random_value(
+    std::mt19937& gen)
+{
+    return std::uniform_int_distribution<T>(std::numeric_limits<T>::lowest(), std::numeric_limits<T>::max())(gen);
+}
+
+template <class T>
+inline typename std::enable_if<std::is_integral<T>::value && sizeof(T) == sizeof(char), T>::type random_value(
+    std::mt19937& gen)
+{
+    return static_cast<T>(
+        std::uniform_int_distribution<int64_t>(std::numeric_limits<T>::lowest(), std::numeric_limits<T>::max())(gen));
+}
 
 namespace v1
 {
@@ -28,9 +54,9 @@ struct simple_data
 
     bool operator==(const simple_data&) const = default;
 
-    int a{};
-    int b{};
-    float c{};
+    int a{random_value<int>(gen)};
+    int b{random_value<int>(gen)};
+    float c{random_value<float>(gen)};
 };
 
 std::ostream& operator<<(std::ostream& str, const simple_data& a)
@@ -47,9 +73,9 @@ struct simple_data
 {
     bool operator==(const simple_data&) const = default;
 
-    int a{};
-    int b{};
-    float c{};
+    int a{random_value<int>(gen)};
+    int b{random_value<int>(gen)};
+    float c{random_value<float>(gen)};
 };
 
 template <class Archive>
@@ -84,9 +110,9 @@ struct simple_data
 
     bool operator==(const simple_data&) const = default;
 
-    int a{};
-    int b{};
-    float c{};
+    int a{random_value<int>(gen)};
+    int b{random_value<int>(gen)};
+    float c{random_value<float>(gen)};
 };
 
 std::ostream& operator<<(std::ostream& str, const simple_data& a)
@@ -103,9 +129,9 @@ struct simple_data
 {
     bool operator==(const simple_data&) const = default;
 
-    int a{};
-    int b{};
-    float c{};
+    int a{random_value<int>(gen)};
+    int b{random_value<int>(gen)};
+    float c{random_value<float>(gen)};
 };
 
 template <class Archive>
@@ -158,3 +184,5 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(serialize_free_func, A, test_types)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // namespace
