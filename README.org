@@ -27,8 +27,6 @@ find ./ -type f -name '*.?pp' -exec clang-format -i {} \;
 *** cmake-format configuration
 see [[https://github.com/cheshirekow/cmake_format][cmake-format]]
 execute with: find . -type f -name 'CMakeLists.txt' -execdir cmake-format -i {} \;
-** ci
-Support for travis-ci is available.
 ** compile_comand.json
 cmake is configured to produce a compile_comand.json.
 Most tools expect it to be in the root directory of the project.
