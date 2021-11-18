@@ -1,5 +1,4 @@
-#include "cereal/access.hpp"
-#include <boost/utility/identity_type.hpp>
+#include <cereal/access.hpp>
 #include <cereal/archives/json.hpp>
 #include <cereal/cereal.hpp>
 #include <cereal/types/utility.hpp>
@@ -7,15 +6,13 @@
 
 #include <boost/mpl/list.hpp>
 #include <boost/test/unit_test.hpp>
-#include <boost/utility/identity_type.hpp>
 
 #include <ostream>
 #include <random>
 #include <sstream>
-#include <tuple>
 #include <type_traits>
+#include <typeinfo>
 #include <utility>
-#include <vector>
 
 namespace
 {
@@ -43,6 +40,15 @@ inline typename std::enable_if<std::is_integral<T>::value && sizeof(T) == sizeof
         std::uniform_int_distribution<int64_t>(std::numeric_limits<T>::lowest(), std::numeric_limits<T>::max())(gen));
 }
 
+template <class T>
+inline typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type random_value(std::mt19937& gen)
+{
+    std::string s(std::uniform_int_distribution<int>(3, 30)(gen), ' ');
+    for (char& c : s)
+        c = static_cast<char>(std::uniform_int_distribution<int>('A', 'Z')(gen));
+    return s;
+}
+
 namespace v1
 {
 struct simple_data
@@ -57,7 +63,7 @@ struct simple_data
 
     int a{random_value<int>(gen)};
     int b{random_value<int>(gen)};
-    float c{random_value<float>(gen)};
+    std::string c{random_value<std::string>(gen)};
 };
 
 std::ostream& operator<<(std::ostream& str, const simple_data& a)
@@ -76,7 +82,7 @@ struct simple_data
 
     int a{random_value<int>(gen)};
     int b{random_value<int>(gen)};
-    float c{random_value<float>(gen)};
+    std::string c{random_value<std::string>(gen)};
 };
 
 template <class Archive>
@@ -113,7 +119,7 @@ struct simple_data
 
     int a{random_value<int>(gen)};
     int b{random_value<int>(gen)};
-    float c{random_value<float>(gen)};
+    std::string c{random_value<std::string>(gen)};
 };
 
 std::ostream& operator<<(std::ostream& str, const simple_data& a)
@@ -132,7 +138,7 @@ struct simple_data
 
     int a{random_value<int>(gen)};
     int b{random_value<int>(gen)};
-    float c{random_value<float>(gen)};
+    std::string c{random_value<std::string>(gen)};
 };
 
 template <class Archive>
@@ -174,7 +180,7 @@ class simple_data
 
     int a{random_value<int>(gen)};
     int b{random_value<int>(gen)};
-    float c{random_value<float>(gen)};
+    std::string c{random_value<std::string>(gen)};
 };
 
 std::ostream& operator<<(std::ostream& str, const simple_data& a)
@@ -210,7 +216,7 @@ class simple_data
 
     int a{random_value<int>(gen)};
     int b{random_value<int>(gen)};
-    float c{random_value<float>(gen)};
+    std::string c{random_value<std::string>(gen)};
 };
 
 std::ostream& operator<<(std::ostream& str, const simple_data& a)
@@ -221,10 +227,58 @@ std::ostream& operator<<(std::ostream& str, const simple_data& a)
 }
 } // namespace v6
 
+namespace v7
+{
+class simple_data
+{
+  public:
+    // bool operator==(const simple_data&) const = default;
+    bool operator==(const simple_data& other) const
+    {
+        return other.a == a && other.b == b && other.c == c;
+    }
+
+  private:
+    friend std::ostream& operator<<(std::ostream& str, const simple_data& a);
+    friend class cereal::access;
+
+    template <class Archive>
+    std::string save_minimal(const Archive&) const
+    {
+        std::ostringstream str{};
+        str << a << ' ' << b << ' ' << c;
+        return str.str();
+    }
+
+    template <class Archive>
+    void load_minimal(const Archive&, const std::string& from)
+    {
+        std::istringstream str{from};
+        str >> a >> b >> c;
+    }
+
+    int a{random_value<int>(gen)};
+    int b{random_value<int>(gen)};
+    std::string c{random_value<std::string>(gen)};
+};
+
+std::ostream& operator<<(std::ostream& str, const simple_data& a)
+{
+    str << "a=" << a.a << " b=" << a.b << " c=" << a.c;
+
+    return str;
+}
+} // namespace v7
+
 BOOST_AUTO_TEST_SUITE(cereal_tests)
 
-using test_types = boost::mpl::
-    list<v1::simple_data, v2::simple_data, v3::simple_data, v4::simple_data, v5::simple_data, v6::simple_data>;
+using test_types = boost::mpl::list<v1::simple_data,
+                                    v2::simple_data,
+                                    v3::simple_data,
+                                    v4::simple_data,
+                                    v5::simple_data,
+                                    v6::simple_data,
+                                    v7::simple_data>;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(serialize_types, A, test_types)
 {
@@ -233,7 +287,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(serialize_types, A, test_types)
     {
         cereal::JSONOutputArchive archive{ss};
 
-        archive(cereal::make_nvp("serialize_free_func", a));
+        archive(cereal::make_nvp(typeid(A).name(), a));
     }
 
     BOOST_REQUIRE(!ss.str().empty());
